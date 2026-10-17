@@ -1,39 +1,49 @@
-# Asset register
+# Asset provenance — 17 October 2026
 
-## Three.js
+The user authorized third-party realistic food imagery. All assets below are bundled locally. No restaurant screenshot crop or generated food illustration remains in the page.
 
-- Version: 0.160.1, pinned, locally bundled as `vendor/three.min.js`.
-- Source: https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js
-- License: MIT; notice included at `vendor/THREE-LICENSE.txt`.
-- This older UMD build is intentional for a no-build, directly openable HTML handoff. It logs a deprecation notice for the UMD distribution. A production module-based project should evaluate and pin a current supported release and retest it, not silently swap runtime versions.
+## 3D models
 
-## Fonts
+### Avocado photogrammetry scan
 
-- Bricolage Grotesque: Google Fonts, static weight 700.
-- DM Sans: Google Fonts, static weights 400 and 600.
-- Downloaded from fonts.gstatic.com via Google's stylesheet and retained as local TrueType font files.
-- SIL Open Font License notices are included in `assets/`.
-- Fallback fonts: Arial and Georgia. No external font request is made at runtime.
+- Author: Nodef Open Pipeline / Misfits-Rebels-Outcasts.
+- Repository and public-domain declaration: https://github.com/Misfits-Rebels-Outcasts/Public-Domain-USDZ
+- Source file: https://raw.githubusercontent.com/Misfits-Rebels-Outcasts/Public-Domain-USDZ/master/usdz/avocado_1.usdz
+- License: the creator releases all files in the repository into the public domain, per its README.
+- Included file: `assets/models/avocado.glb`.
+- Conversion: USDZ mesh and face-varying UVs converted to glTF; vertex normals reconstructed; vertices welded; original 4096 px photographed color texture resized to 2048 px and encoded as WebP. Roughness 0.85, metalness 0. No original image was replaced with a generated texture.
+- This is a whole avocado scan, not the rejected hand-painted Microsoft avocado.
 
-## Real photographic assets in the current revision
+### MandarinOrange
 
-`assets/menu-reference.png` is an unchanged copy of the user-supplied 2047 × 1279 menu screenshot. CSS viewport framing selects its pizza, rice-bowl and grilled-sandwich photographs. Category photos are reused across related menu items and are labelled accordingly. See `PHOTOGRAPHY-REVISION.md` for resolution and exact-dish limitations. No new generated food image is used in this revision.
+- Initial creator: zamdreamer (2015). PBR material: Eric Chadwick / Wayfair (2023).
+- Source and full attribution: https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/MandarinOrange
+- Original scan: https://sketchfab.com/3d-models/orange-774bc66d11c24855bf722e35249fddf7
+- License: Creative Commons Attribution 4.0 International, https://creativecommons.org/licenses/by/4.0/
+- Included file: `assets/models/citrus.glb`.
+- Changes: packaged glTF resources into GLB, welded vertices, compressed textures to WebP at up to 2048 px; normalized and staged in the website. Source material maps and diffuse transmission extension retained.
+- Required attribution is visible in the website footer disclosure and retained here.
 
-## Original code-based art
+The ingredient studies are decorative concepts, not exact restaurant products or a claim about menu ingredients.
 
-- Proposed wordmark and favicon: inline/local SVG.
-- The former SVG menu food drawings have been removed.
-- Bowl, pizza, grains, vegetables and floating ingredients: original procedural Three.js geometry in `scene.js`.
-- Location illustration: decorative inline SVG, explicitly not a navigational map.
+## Photographs — Unsplash License
 
-## Previous draft image — no longer used or packaged
+https://unsplash.com/license permits commercial website use and distribution as part of the website. Do not resell the unmodified images as a separate stock collection. Credit is included voluntarily in the footer.
 
-File: `assets/food-editorial.png`.
+| Local file | Photographer | Source |
+| --- | --- | --- |
+| `assets/photos/salad.jpg` | Anna Pelzer | https://unsplash.com/photos/IGfIGP5ONV0 |
+| `assets/photos/pizza.jpg` | Ivan Torres | https://unsplash.com/photos/MQUqbmszGGM |
+| `assets/photos/sandwich.jpg` | Pille R. Priske | https://unsplash.com/photos/U0PiIS4Uvkc |
 
-Created with the built-in image-generation tool for this project. It is visibly labelled as concept imagery, not a photograph of actual Clock To Fit food. No restaurant screenshot or reference-site asset was extracted or reused.
+The bowl photo is 1400 px wide, pizza 1200 px and sandwich 1000 px. The menu labels them representative category imagery. Do not claim they show an exact Clock To Fit menu item.
 
-Prompt:
+## Runtime, fonts and original design
 
-> Use case: photorealistic-natural. Asset type: one landscape editorial food photograph for a premium playful Indian healthy-food cafe website, Clock To Fit. Create a high-end overhead studio photograph on a warm vivid coral orange tabletop, featuring one off-white ceramic bowl of brown rice, corn, kidney beans, cherry tomatoes, grilled paneer and greens, a whole-wheat vegetable pizza partly visible on the right edge, and half a multigrain vegetable submarine sandwich partly visible at bottom left. A lime wedge and a casually folded butter-yellow linen napkin. All food vegetarian; no meat or eggs. Natural delicious textures, appetizing beautifully arranged real food, strong side sunlight and crisp natural shadows, magazine food editorial art direction. Main rice bowl at left center, entire image full-bleed with warm coral negative space at upper left. Landscape 3:2 composition. No text, no logo, no watermarks, no packaging. This is illustrative concept imagery, not a photo of actual restaurant products.
+- Three.js 0.180.0, MIT. Full license in `vendor/THREE-LICENSE.txt`. GLTFLoader and RoomEnvironment are bundled from the same package.
+- Bricolage Grotesque and DM Sans: SIL Open Font License; copies are beside the font files.
+- Logo concept, decorative map, layout and interaction code were prepared for this concept. The map is not navigational; Google Maps provides actual directions.
 
-Replace this with owner-approved photographs before presenting food appearance as authentic to the restaurant.
+## Source access limits
+
+Innerscene bowl/pizza models, ambientCG pizza and Poly Haven downloads were researched but not included because downloads were blocked. Only the successfully obtained, inspected and credited files listed above are shipped.

@@ -1,0 +1,8 @@
+Avocado: Nodef Open Pipeline / Misfits-Rebels-Outcasts. Public domain.
+https://github.com/Misfits-Rebels-Outcasts/Public-Domain-USDZ
+Converted from avocado_1.usdz to glTF, welded vertices, compressed texture, staged in Three.js.
+
+MandarinOrange: zamdreamer (2015), Eric Chadwick / Wayfair (2023).
+Creative Commons Attribution 4.0 International: https://creativecommons.org/licenses/by/4.0/
+https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/MandarinOrange
+Converted to GLB, welded vertices, compressed textures, staged in Three.js.

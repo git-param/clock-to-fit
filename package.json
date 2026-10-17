@@ -1,0 +1,14 @@
+{
+  "name": "clock-to-fit-concept",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Buildless restaurant concept with local food scans and photography",
+  "scripts": {
+    "bundle:vendor": "esbuild vendor/entry.js --bundle --minify --format=iife --target=es2020 --outfile=vendor/three-runtime.js --legal-comments=eof",
+    "package": "python3 tools/package.py"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10",
+    "three": "0.180.0"
+  }
+}

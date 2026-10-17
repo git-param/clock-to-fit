@@ -75,12 +75,16 @@
   let currentFilter = 'all';
   let expanded = false;
 
-  // Real photographs from the user-supplied menu screenshot. CSS framing keeps
-  // the original file unchanged. These are category examples, not exact SKU photos.
+  // Licensed stock food photography; representative category imagery.
   function dishPhoto(kind) {
-    const labels = { bowls:'Rice bowl photograph from the supplied Clock To Fit menu screenshot', pizza:'Pizza photograph from the supplied Clock To Fit menu screenshot', subs:'Grilled sandwich photograph from the supplied Clock To Fit menu screenshot; category example, not a submarine photo' };
-    const captions = { bowls:'Bowl category photo', pizza:'Pizza category photo', subs:'Sandwich category photo' };
-    return `<div class="food-photo food-photo--${kind}" role="img" aria-label="${labels[kind]}"><img src="assets/menu-reference.png" alt="" width="2047" height="1279" loading="lazy"><span class="photo-type">${captions[kind]}</span></div>`;
+    const photos = {
+      bowls: { file:'salad', alt:'A colourful avocado and chickpea bowl', position:'50% 50%' },
+      pizza: { file:'pizza', alt:'A freshly baked cheese pizza on a wooden board', position:'58% 50%' },
+      subs: { file:'sandwich', alt:'A fresh vegetable and chickpea sandwich', position:'50% 70%' }
+    };
+    const photo = photos[kind];
+    const src = window.CTF_PHOTOS?.[photo.file] || `assets/photos/${photo.file}.jpg`;
+    return `<div class="food-photo"><img src="${src}" alt="${photo.alt}; representative category photo" loading="lazy" style="object-position:${photo.position}"></div>`;
   }
 
   const dialog = $('#dish-dialog');

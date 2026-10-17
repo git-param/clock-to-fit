@@ -1,58 +1,47 @@
-# Clock To Fit — a good time to eat well
+# Clock To Fit — textured 3D edition
 
-A working, photo-first interactive website concept with an optional 3D view for Clock To Fit in Thaltej, Ahmedabad. Plain HTML, CSS and JavaScript, with Three.js bundled locally. No npm installation or build step is required.
+A plain HTML, CSS and JavaScript restaurant concept with real-time Three.js, two photographic 3D scans, and sharp food photography. Prepared 17 October 2026.
 
 ## Open it
 
-1. Extract the entire ZIP.
-2. Open `index.html` in a current desktop browser. Keep the accompanying files and folders together.
-3. Or use VS Code Live Server. An optional local server is `python3 -m http.server 8000` from this folder, then visit `http://localhost:8000`.
+Open `Clock-To-Fit-Preview.html` in a current Chrome, Edge, Firefox or Safari browser. It contains the fonts, photos, models and runtime in one file. Download the HTML first if your file preview does not execute JavaScript.
 
-For a single portable file, open `Clock-To-Fit-Preview.html`. It embeds all fonts, imagery, styles and scripts. Edit the separate source files rather than the generated preview.
+For editing, open `index.html` from the extracted folder. All dependencies are local. No API key, npm install, internet connection or server is required for the included page. External phone, Maps and source-credit links naturally use their respective apps or websites.
 
-## Photography revision
+## What changed
 
-The hero and menu now use real food photographs framed from the supplied menu screenshot. The default hero offers pointer tilt; choose **Explore 3D** for the original rotatable model. These are different viewing modes. Category photos may show a different dish, and the source screenshot limits sharpness. See `docs/PHOTOGRAPHY-REVISION.md`.
+- Replaced both simple procedural food models and the screenshot-based photo stage.
+- Added a public-domain avocado photogrammetry scan and a textured mandarin scan, rendered as real geometry with Three.js r180 and GLTFLoader.
+- Drag or use arrow keys to turn the scene. Use + / − to zoom and Home to reset. The on-screen controls also work without dragging.
+- Choose Avocado or Citrus to change the featured ingredient. Both models are visible in the scene.
+- Added licensed, locally stored photographs for bowls, pizza and sandwiches. These are representative stock photos, not exact menu-item photographs.
+- Kept 14 supplied menu entries, filters, dish dialogs, mobile navigation, phone and Google Maps links.
+- Respects reduced motion, offers a pause button, and stops rendering when off-screen or in a hidden tab.
+- Falls back to a sharp food photograph if the 3D runtime or model loading fails.
 
-## What works
-
-- Real Three.js WebGL bowl and pizza, constructed from procedural geometry.
-- Drag horizontally to rotate; left/right arrow keys also rotate the focused canvas.
-- “Give it a toss” or Space animates the ingredients. With motion paused, it makes a discrete rotation instead.
-- A dish switcher, soft shadows, subtle floating ingredients and pointer tilt.
-- Menu category filters, 14 sourced dishes and prices, and accessible native dialog details.
-- Mobile navigation, scroll reveals, continuous typography band, progress indicator and pause-motion control.
-- Phone links and Google Maps links; these are user-initiated outbound actions.
-- Reduced-motion support, pause outside the viewport, capped pixel ratio and static WebGL fallback.
-- Local fonts, local Three.js and local photographic assets. No runtime CDN requirement.
-
-## Source map
+## Edit these files
 
 | File | Purpose |
 | --- | --- |
-| `index.html` | Semantic page, content, navigation, dialogs, contact links |
-| `style.css` | Design tokens, layout, responsive styles, CSS animation |
-| `script.js` | Menu data, filtering, dialogs, navigation and motion preferences |
-| `scene.js` | Three.js setup, procedural food models, animation and input handling |
-| `photo-stage.js` | Photo/model switcher, real-photo framing and pointer tilt |
-| `assets/` | Local fonts, favicon and the supplied menu screenshot |
-| `vendor/` | Pinned Three.js 0.160.1 UMD build and its MIT license |
-| `CLAUDE-HANDOFF.md` | Copy-ready brief for continuing the concept |
-| `docs/CONTENT-SOURCES.md` | Fact provenance, menu transcription and approval needs |
-| `docs/ASSETS.md` | Asset provenance, licenses and image-generation prompt |
+| `index.html` | Layout, business details, copy and visible asset credits |
+| `style.css` | Responsive cream / forest / coral design |
+| `script.js` | Menu data, photos, dialogs and navigation |
+| `scene.js` | Three.js lighting, staging, loading and interaction |
+| `assets/models/` | Ready-to-use textured GLB files |
+| `assets/photos/` | Licensed food photography |
+| `model-data.js` | Generated embedded model bytes for direct file opening |
+| `vendor/three-runtime.js` | Bundled Three.js and GLTFLoader runtime |
+| `tools/package.py` | Rebuild embedded assets, standalone preview and ZIP |
+| `CLAUDE-HANDOFF.md` | Extension brief for Claude |
 
-## Important boundaries
+After editing files or replacing GLBs, run `python3 tools/package.py` from this folder to regenerate the model data, standalone preview and ZIP. The outputs also appear one directory above the project.
 
-This is an independent website concept, not the restaurant’s approved official site. The wordmark is a proposed treatment. The optional 3D models and decorative map remain concept art. Food photographs are real category examples from the supplied screenshot; they do not verify every exact dish appearance.
+You do not need npm to use or edit the page. Only to rebuild the vendor runtime: `npm install`, then `npm run bundle:vendor`. Three.js and esbuild versions are pinned in package.json.
 
-Menu prices, the rating/review count, address and services came from the user's supplied listing and screenshot. They have not been verified as live data. The site avoids claiming that the shop is currently open and asks visitors to call for current hours. There is no checkout, reservation submission, WhatsApp integration, backend or payment system. The phone number is not assumed to support WhatsApp.
+## Facts and imagery
+
+The restaurant information and menu prices are supplied snapshots, not live data. No ordering, reservation or payment backend is implemented. Images and ingredient studies do not establish the ingredients of any specific dish. Keep the credits in `index.html` and see `docs/ASSETS.md` and `docs/CONTENT-SOURCES.md` before changing or publishing content.
 
 ## Verification
 
-JavaScript syntax, local asset paths, menu counts/prices and non-browser interaction checks are covered in the delivery. The permitted browser-control environment was unavailable, so live WebGL rendering, responsive visual layout, real-device performance and screen-reader behavior still require browser QA. Do not interpret source validation as a passed device test.
-
-Suggested manual checks: 1440px desktop, 768px tablet, 390px and 360px mobile; keyboard navigation and Escape on the dialog; both 3D modes; motion pause; OS reduced motion; WebGL disabled; horizontal dragging without blocking vertical mobile scrolling; all menu filters; external phone/Maps links.
-
-## Going beyond the starter
-
-The largest remaining visual improvement will come from art-directed textured GLB food models and original-resolution, owner-approved dish photography. The current scene is genuinely 3D, but deliberately stylised. Read `CLAUDE-HANDOFF.md` for the next implementation pass. Avoid replacing the concept with a generic card-based restaurant template.
+The included GLBs parse through the bundled loader; their textures decode; menu, dialog, navigation and 3D controls pass programmatic checks. Both model compositions were inspected in an independent offline 3D renderer. Browser/GPU rendering and responsive layouts still need a manual browser pass; see `docs/QA.md`.

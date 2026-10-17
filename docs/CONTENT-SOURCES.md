@@ -35,7 +35,7 @@ This is a partial menu, not all restaurant items. Cafe Mocha, Chipotle Burrito B
 
 ## Creative copy and visual concepts
 
-The slogan, proposed wordmark, illustrations, procedural food models and decorative neighbourhood map are original concept treatments. The decorative map is not geospatially accurate and is explicitly labelled. Google Maps search is the actual directions action.
+The slogan, proposed wordmark, illustrations and decorative neighbourhood map are original concept treatments. The decorative map is not geospatially accurate and is explicitly labelled. Google Maps search is the actual directions action.
 
 No review quotations are reproduced or invented. The supplied rating and count are visibly described as coming from the supplied listing.
 
@@ -46,6 +46,6 @@ No review quotations are reproduced or invented. The supplied rating and count a
 
 The primary site was available through search indexing after the initial direct read failed. Its Awwwards showcase lists 3D, WebGL, GSAP, typography, storytelling and microinteractions, with examples of a 3D tape interaction and directional/horizontal scrolling. This concept borrows the ambition and playfulness, not the reference assets or layout. Its live transitions were not browser-inspected in this environment.
 
-## Photography correction
+## Current visual direction — 17 October 2026
 
-The revised page uses photographs already present in the supplied screenshot, framed through CSS without altering the image file. They are category examples, not verified exact-dish photos. Generated editorial photography and vector food drawings are no longer visible. See PHOTOGRAPHY-REVISION.md.
+The user explicitly authorized third-party food imagery instead of actual restaurant photographs. The revised site uses public-domain / Creative Commons photogrammetry ingredient models and licensed Unsplash photography. No Google Maps screenshot crop is used as an image. Models and photos are representative visual concepts, not evidence of ingredients in a particular dish. See ASSETS.md for exact sources and licenses.

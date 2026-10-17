@@ -17,7 +17,7 @@ The current hero uses two genuine food scans: a public-domain avocado by Nodef a
 
 ## Next-level extension opportunities
 
-- Introduce a scroll-directed camera sequence that transitions the ingredient composition into the menu without hiding the primary content or hijacking scrolling.
+- DONE: scroll-directed stage. `scene.js` blends DOM landing pads (`#scene-wrap`, `.story-slot`, `.menu-slot`) by proximity to the viewport centre; add a pad to `pads[]` to add a stop. Intro pop-in and canvas contact shadows are in too; profile on a real phone.
 - Replace or supplement these ingredients with a commercially reusable, photogrammetry-quality bowl or pizza GLB. Integrate the model itself, its textures and required attribution. Some candidate hosts blocked automated downloads; their files are not included.
 - Add restrained model reveal transitions and contact shadows after profiling on a real phone.
 - Use actual restaurant ordering/reservation links only after the owner supplies them.

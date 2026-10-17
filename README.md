@@ -10,6 +10,8 @@ For editing, open `index.html` from the extracted folder. All dependencies are l
 
 ## What changed
 
+- Scroll-directed stage: the two scans follow you from the hero to a sticker on the story photo and a badge beside the menu heading, swapping which ingredient leads, then shrink away. Native scrolling is untouched; they have a pop-in reveal and soft contact shadows.
+
 - Replaced both simple procedural food models and the screenshot-based photo stage.
 - Added a public-domain avocado photogrammetry scan and a textured mandarin scan, rendered as real geometry with Three.js r180 and GLTFLoader.
 - Drag or use arrow keys to turn the scene. Use + / − to zoom and Home to reset. The on-screen controls also work without dragging.

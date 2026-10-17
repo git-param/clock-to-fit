@@ -5,7 +5,7 @@ from fontTools.ttLib import TTFont
 from fontTools.pens.basePen import BasePen
 
 ROOT = Path(__file__).resolve().parents[1]
-STRINGS = ['It’s a good', 'time to', 'eat well.', 'clock to fit']
+STRINGS = ['It’s a good', 'time to', 'eat well.', 'good food.', 'good mood.', 'good time.', 'clock to fit']
 SEG = 7
 
 class FlatPen(BasePen):

@@ -45,6 +45,32 @@
   addEventListener('scroll', () => { if (!scrollQueued) { scrollQueued = true; requestAnimationFrame(updateProgress); } }, { passive: true });
   addEventListener('resize', updateProgress, { passive: true });
   updateProgress();
+  // Native vertical scroll moves three full-width panels through a sticky viewport.
+  // Paused and reduced-motion modes use an ordinary vertical stack.
+  const rail = $('.word-rail');
+  const railTrack = $('.word-rail-track');
+  const railMeter = $('.word-rail-meter i');
+  let railTravel = 0;
+  function sizeRail() {
+    if (!rail) return;
+    const staticMode = motionPaused || reducedMotion.matches;
+    rail.classList.toggle('rail-static', staticMode);
+    rail.style.height = '';
+    railTravel = staticMode ? 0 : Math.max(0, railTrack.scrollWidth - rail.clientWidth);
+    if (!staticMode) rail.style.height = `${Math.ceil(innerHeight + railTravel)}px`;
+    updateRail();
+  }
+  function updateRail() {
+    if (!rail) return;
+    const progress = railTravel ? Math.max(0, Math.min(1, (scrollY - (rail.getBoundingClientRect().top + scrollY)) / railTravel)) : 0;
+    railTrack.style.transform = railTravel ? `translate3d(${-Math.round(progress * railTravel)}px,0,0)` : '';
+    railMeter.style.transform = `scaleX(${progress})`;
+  }
+  addEventListener('scroll', updateRail, { passive: true });
+  addEventListener('resize', sizeRail, { passive: true });
+  addEventListener('ctf:motion', sizeRail);
+  if (document.fonts?.ready) document.fonts.ready.then(sizeRail);
+  sizeRail();
   if ('IntersectionObserver' in window) {
     const reveals = new IntersectionObserver((entries) => entries.forEach((entry) => {
       if (entry.isIntersecting) { entry.target.classList.add('is-visible'); reveals.unobserve(entry.target); }

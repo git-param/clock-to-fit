@@ -1,10 +1,9 @@
 /* Textured glTF food + extruded lettering — scroll-directed stage. Edit directly; no build step.
  *
  * One fixed, pointer-transparent canvas covers the viewport.
- *  • Food: a bowl (generated GLB with a photographed, displaced food mound) and two photogrammetry
- *    scans are "anchored" to DOM landing pads (hero stage → story sticker → menu badge). Each frame the
- *    pads' live rects are blended by proximity to the viewport centre, so the objects glide between
- *    sections, trade which one leads, and shrink away once the menu grid arrives.
+ *  • Food: the selected bowl or ingredient scan is anchored to DOM landing pads (hero stage →
+ *    story sticker → menu badge). The pads' live rects are blended by proximity to the viewport
+ *    centre, so the selected object glides between sections and shrinks away at the menu grid.
  *  • Lettering: the hero headline and footer wordmark are real extruded, bevelled Bricolage glyph
  *    geometry that tracks its DOM text pixel-for-pixel, leans toward the pointer, and folds up on scroll.
  * Native scrolling is never intercepted. Dragging, keys and zoom work on the hero pad. */
@@ -19,11 +18,11 @@
   const buttons = [...document.querySelectorAll('[data-scene], [data-view]')];
   const NAMES = ['bowl', 'avocado', 'citrus'];
   const LABEL = { bowl:'bowl', avocado:'avocado', citrus:'mandarin' };
-  // Ordered landing pads. `lead` is which object stars there; null = the visitor's hero choice.
+  // Ordered landing pads for the currently selected model.
   const pads = [
-    { el: wrap, lead: null },
-    { el: document.querySelector('.story-slot'), lead: 'avocado' },
-    { el: document.querySelector('.menu-slot'), lead: 'bowl' }
+    { el: wrap },
+    { el: document.querySelector('.story-slot') },
+    { el: document.querySelector('.menu-slot') }
   ].filter(pad => pad.el);
 
   let renderer, frame = 0, contextLost = false;
@@ -79,28 +78,15 @@
   let paused = root.classList.contains('motion-paused');
   let ready = false, disposed = false, selected = 'bowl';
   let yaw = 0, pitch = 0, zoom = 1, targetYaw = 0, targetPitch = 0, targetZoom = 1;
-  let pointerX = 0, pointerY = 0, drag = null, lastTime = 0, phase = 0, introStart = -1;
+  let pointerX = 0, pointerY = 0, drag = null, lastTime = 0, phase = 0, introStart = -1, selectionStart = -1;
   let pageX = 0, pageY = 0, tiltX = 0, tiltY = 0;       // window-wide pointer for lettering lean
   let vw = 1, vh = 1;
-  const heroLead = { bowl:1, avocado:0, citrus:0 };
   const models = {}, shadows = {};
-  // Composition in pad units for each "who leads" state.
+  // Each choice fills the stage on its own.
   const layout = {
-    bowl: {
-      bowl:{position:[0.02,-0.45,0], scale:3.55, rotation:[0.72,0.2,0]},
-      avocado:{position:[1.42,1.32,0.5], scale:1.0, rotation:[-0.9,0.4,-0.1]},
-      citrus:{position:[-1.38,1.2,0.35], scale:1.05, rotation:[0.16,0.3,0.18]}
-    },
-    avocado: {
-      avocado:{position:[0.18,-0.05,0], scale:3.25, rotation:[-1.1,-0.35,-0.4]},
-      citrus:{position:[-1.2,1.18,-0.4], scale:1.05, rotation:[0.16,0.3,0.18]},
-      bowl:{position:[1.15,-1.2,-0.5], scale:1.55, rotation:[0.7,0.3,0.1]}
-    },
-    citrus: {
-      citrus:{position:[0.05,0.02,0], scale:3.35, rotation:[0.05,-0.1,-0.16]},
-      avocado:{position:[1.18,1.12,-0.5], scale:0.95, rotation:[-0.9,0.4,-0.1]},
-      bowl:{position:[-1.15,-1.25,-0.5], scale:1.55, rotation:[0.7,-0.3,-0.1]}
-    }
+    bowl:{position:[0,-0.2,0], scale:3.85, rotation:[0.68,0.2,0]},
+    avocado:{position:[0,0,0], scale:3.55, rotation:[-1.1,-0.35,-0.4]},
+    citrus:{position:[0,0,0], scale:3.55, rotation:[0.05,-0.1,-0.16]}
   };
   const FLOOR = -2.1;
   const loader = new GLTFLoader();
@@ -117,7 +103,7 @@
         const materials = Array.isArray(object.material) ? object.material : [object.material];
         materials.forEach(material => {
           if (material.map) material.map.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-          material.envMapIntensity = 0.8;
+          material.envMapIntensity = name === 'bowl' ? 0.3 : 0.8;
         });
       });
       const group = new T.Group(); group.name = name; group.add(model); spin.add(group);
@@ -128,7 +114,7 @@
   }
 
   /* ---------- 3D lettering ---------- */
-  const COLORS = { ink:0x0c4a2c, coral:0xff5a24 };
+  const COLORS = { ink:0x0c4a2c, coral:0xff5a24, cream:0xf6f2e7 };
   const materials = {};
   const lettering = [];   // blocks: { root, mode, group, lines:[{el, marker, mesh, text, key}] }
   // Not tone-mapped so the faces keep the brand colours; the colours are pre-scaled because the
@@ -163,7 +149,7 @@
   }
   function initLettering() {
     if (!window.CTF_GLYPHS) return;
-    [['.hero h1', 'hero'], ['.footer-wordmark', 'footer']].forEach(([selector, mode]) => {
+    [['.hero h1', 'hero'], ['.word-panel-food h2', 'rail'], ['.word-panel-mood h2', 'rail'], ['.word-panel-time h2', 'rail'], ['.footer-wordmark', 'footer']].forEach(([selector, mode]) => {
       const container = document.querySelector(selector); if (!container) return;
       const lines = [...container.querySelectorAll('.t3d-line')].map(el => {
         const marker = document.createElement('i');   // zero-size baseline probe
@@ -189,7 +175,8 @@
       const lean = paused ? 0 : 1;
       let rx = -tiltY * 0.16 * lean, ry = tiltX * 0.26 * lean;
       if (block.mode === 'hero') rx -= smooth01(0, 1, scrollY / (vh * 0.75)) * 0.9 * (paused ? 0 : 1);
-      else rx += (1 - smooth01(0, 1, (vh - rect.top) / (vh * 0.3))) * 1.15 * (paused ? 0 : 1);
+      else if (block.mode === 'footer') rx += (1 - smooth01(0, 1, (vh - rect.top) / (vh * 0.3))) * 1.15 * (paused ? 0 : 1);
+      else rx += (1 - smooth01(0, 1, (vh - rect.top) / (vh * 0.5))) * 0.32 * (paused ? 0 : 1);
       block.group.rotation.set(rx, ry, 0);
       block.lines.forEach((line, i) => {
         const cs = getComputedStyle(line.el), fs = parseFloat(cs.fontSize);
@@ -219,12 +206,9 @@
   const backOut = t => { const c1 = 1.4, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
   const backOutSoft = t => { const c1 = 0.9, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
   const v3 = new T.Vector3();
-  const leadVector = pad => pad.lead === null ? heroLead : { bowl:+(pad.lead === 'bowl'), avocado:+(pad.lead === 'avocado'), citrus:+(pad.lead === 'citrus') };
-
   // Blend the pads by how close each one is to the viewport's middle band.
   function placeRig(upp) {
     let sum = 0, sx = 0, sy = 0, ss = 0, conf = 0;
-    const lead = { bowl:0, avocado:0, citrus:0 };
     // The focus line starts on the hero pad (so the hero is never pulled toward a nearby section)
     // and drifts to the middle of the viewport as the visitor scrolls.
     const first = pads[0].el.getBoundingClientRect();
@@ -234,19 +218,17 @@
       const r = pad.el.getBoundingClientRect();
       if (r.width < 8 || r.height < 8 || r.bottom < -vh * 0.6 || r.top > vh * 1.6) continue;
       const cy = r.top + r.height / 2, d = (cy - focus) / (vh * 0.42);
-      const w = Math.exp(-d * d), lv = leadVector(pad);
+      const w = Math.exp(-d * d);
       sum += w; conf = Math.max(conf, w);
       sx += w * (r.left + r.width / 2); sy += w * cy; ss += w * Math.min(r.width, r.height);
-      NAMES.forEach(n => { lead[n] += w * lv[n]; });
     }
-    if (sum < 1e-4) return { visible: 0, lead };
+    if (sum < 1e-4) return 0;
     const k = 1 / sum;
-    NAMES.forEach(n => { lead[n] *= k; });
     // Dip slightly while travelling between pads, and shrink away after the last one.
     const visible = smooth(0.03, 0.32, conf) * (0.62 + 0.38 * smooth(0.3, 0.9, conf));
     rig.position.set((sx * k - vw / 2) * upp, -(sy * k - vh / 2) * upp, 0);
     rig.scale.setScalar(upp * ss * k / FRAME_UNITS * zoom * visible);
-    return { visible, lead };
+    return visible;
   }
 
   function render(time) {
@@ -258,9 +240,8 @@
     const ease = paused ? 1 : 1 - Math.exp(-dt * 12);
     yaw = T.MathUtils.lerp(yaw, targetYaw, ease); pitch = T.MathUtils.lerp(pitch, targetPitch, ease); zoom = T.MathUtils.lerp(zoom, targetZoom, ease);
     tiltX = T.MathUtils.lerp(tiltX, pageX, ease * 0.6); tiltY = T.MathUtils.lerp(tiltY, pageY, ease * 0.6);
-    NAMES.forEach(n => { heroLead[n] = paused ? +(selected === n) : T.MathUtils.lerp(heroLead[n], +(selected === n), 1 - Math.exp(-dt * 5)); });
     const upp = 2 * DIST * Math.tan(T.MathUtils.degToRad(FOV / 2)) / vh;
-    const { visible, lead } = placeRig(upp);
+    const visible = placeRig(upp);
     const foodOn = visible > 0.001;
     rig.visible = foodOn;
     const textOn = updateLettering(time, upp, foodOn);
@@ -271,28 +252,25 @@
       // Scroll-directed turn: roughly a third of a revolution per viewport of travel.
       const scrollSpin = paused ? 0 : (scrollY / vh) * 2.1;
       spin.rotation.set(pitch + (hover ? pointerY * 0.06 : 0), yaw + scrollSpin + (hover ? pointerX * 0.1 : 0), 0);
-      NAMES.forEach((name, i) => {
+      NAMES.forEach(name => {
         const group = models[name];
-        const intro = paused || reducedQuery.matches ? 1 : T.MathUtils.clamp((time - introStart - i * 160) / 1100, 0, 1);
+        group.visible = name === selected;
+        shadows[name].visible = name === selected;
+        if (!group.visible) return;
+        const revealStart = Math.max(introStart, selectionStart);
+        const intro = paused || reducedQuery.matches ? 1 : T.MathUtils.clamp((time - revealStart) / 850, 0, 1);
         const pop = intro >= 1 ? 1 : Math.max(0.0001, backOut(intro));
-        const pos = [0, 0, 0], rot = [0, 0, 0]; let scale = 0;
-        NAMES.forEach(l => {
-          const w = lead[l]; if (w < 1e-3) return;
-          const cfg = layout[l][name];
-          for (let a = 0; a < 3; a++) { pos[a] += w * cfg.position[a]; rot[a] += w * cfg.rotation[a]; }
-          scale += w * cfg.scale;
-        });
-        group.position.set(pos[0], pos[1] - (1 - pop) * 0.9, pos[2]);
-        group.scale.setScalar(scale * pop);
-        group.rotation.set(rot[0], rot[1] + (1 - pop) * 2.4, rot[2]);
+        const cfg = layout[name];
+        group.position.set(cfg.position[0], cfg.position[1] - (1 - pop) * 0.9, cfg.position[2]);
+        group.scale.setScalar(cfg.scale * pop);
+        group.rotation.set(cfg.rotation[0], cfg.rotation[1] + (1 - pop) * 2.4, cfg.rotation[2]);
         if (!paused) {
-          const primary = lead[name] > 0.5;
-          group.position.y += Math.sin(phase * (primary ? 0.9 : 0.8) + (primary ? 0 : 2 + i)) * (primary ? 0.065 : 0.1);
-          if (primary) group.rotation.y += Math.sin(phase * 0.38) * 0.1; else group.rotation.z += Math.sin(phase * 0.6 + i) * 0.08;
+          group.position.y += Math.sin(phase * 0.9) * 0.065;
+          group.rotation.y += Math.sin(phase * 0.38) * 0.1;
         }
       });
       scene.updateMatrixWorld(true);
-      NAMES.forEach(name => {
+      NAMES.filter(name => name === selected).forEach(name => {
         const group = models[name], shadow = shadows[name];
         group.getWorldPosition(v3); rig.worldToLocal(v3);
         const height = Math.max(0, v3.y - FLOOR), lift = T.MathUtils.clamp((height - 1.4) / 3.2, 0, 0.65);
@@ -302,7 +280,7 @@
       });
     }
     renderer.render(scene, camera);
-    const intro = introStart >= 0 && time - introStart < 1800;
+    const intro = introStart >= 0 && time - Math.max(introStart, selectionStart) < 1800;
     if (!paused || intro) schedule();
   }
   function resize() {
@@ -320,7 +298,8 @@
   function resetView() { targetYaw = targetPitch = 0; targetZoom = 1; pointerX = pointerY = 0; schedule(); }
   document.querySelectorAll('[data-scene]').forEach(button => button.addEventListener('click', () => {
     if (!ready) return;
-    selected = button.dataset.scene; hero.dataset.ingredient = selected;
+    if (selected === button.dataset.scene) return;
+    selected = button.dataset.scene; selectionStart = performance.now(); hero.dataset.ingredient = selected;
     document.querySelectorAll('[data-scene]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
     wrap.setAttribute('aria-label', `Interactive 3D ${LABEL[selected]} scene. Drag to rotate, arrow keys to turn, plus and minus to zoom, Home to reset.`);
     status.textContent = `${LABEL[selected][0].toUpperCase() + LABEL[selected].slice(1)} selected.`; resetView();
@@ -369,7 +348,7 @@
     wrap.classList.add('scene-ready'); loading.hidden = true; wrap.tabIndex = 0;
     buttons.forEach(button => { button.disabled = false; });
     help.textContent = 'Drag to discover a fresh perspective.';
-    status.textContent = '3D bowl and ingredients ready. Drag or use the arrow keys to rotate. They follow you down the page as you scroll.'; schedule();
+    status.textContent = '3D bowl ready. Choose Bowl, Avocado or Citrus, then drag or use the arrow keys to rotate. The selected model follows you as you scroll.'; schedule();
   }).catch(() => {
     disposed = true; resizeObserver.disconnect(); renderer.dispose(); environment.dispose();
     fallback('Food photography shown. The 3D scene could not load.');

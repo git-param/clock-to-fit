@@ -10,7 +10,7 @@ The current hero uses two genuine food scans: a public-domain avocado by Nodef a
 
 ## Start here
 
-1. Open the standalone preview in a browser. Inspect desktop, tablet and phone layouts; that browser visual gate remains outstanding.
+1. Open the standalone preview in a browser. Desktop, tablet and phone layouts were checked in headless Chromium; a physical-phone performance pass remains outstanding.
 2. Read `scene.js`, `script.js` and `docs/ASSETS.md`.
 3. Preserve working contact links, menu filters, dialogs, keyboard controls, reduced-motion behavior and loading fallback.
 4. Keep the business facts and snapshot prices from `docs/CONTENT-SOURCES.md`. Do not invent live hours, order-provider URLs, nutrition values or ratings.
@@ -18,6 +18,7 @@ The current hero uses two genuine food scans: a public-domain avocado by Nodef a
 ## Next-level extension opportunities
 
 - DONE: scroll-directed stage. `scene.js` blends DOM landing pads (`#scene-wrap`, `.story-slot`, `.menu-slot`) by proximity to the viewport centre; add a pad to `pads[]` to add a stop. Intro pop-in and canvas contact shadows are in too; profile on a real phone.
+- DONE: pinned horizontal-scroll section between story and menu, with three extruded Bricolage word meshes tracking their DOM spans. Paused and reduced-motion modes show a vertical stack.
 - Replace the generated bowl (`tools/make_bowl.py`) with a commercially reusable, photogrammetry-quality bowl or pizza GLB if one can be obtained. Integrate the model itself, its textures and required attribution. Some candidate hosts blocked automated downloads; their files are not included.
 - Add restrained model reveal transitions and contact shadows after profiling on a real phone.
 - Use actual restaurant ordering/reservation links only after the owner supplies them.
@@ -34,4 +35,4 @@ After changes run `python3 tools/package.py`. Only run npm if modifying the bund
 
 ## Added: bowl and 3D lettering
 
-`scene.js` now has three models (bowl, avocado, citrus) with `layout[lead]` compositions blended by pad, and `lettering` blocks that extrude `text-data.js` glyphs at the positions of `.t3d-line` DOM spans (hero h1, footer wordmark). The DOM text turns transparent only after the meshes are ready (`html.text3d`). New copy in those elements needs its characters added to `tools/make_text_data.py`.
+`scene.js` now has three selectable models (bowl, avocado, citrus), showing one at a time while its position blends between scroll pads, and `lettering` blocks that extrude `text-data.js` glyphs at the positions of `.t3d-line` DOM spans (hero h1, pinned panel words, footer wordmark). The DOM text turns transparent only after the meshes are ready (`html.text3d`). New copy in those elements needs its characters added to `tools/make_text_data.py`.

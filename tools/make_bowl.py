@@ -1,28 +1,25 @@
 """Generate assets/models/bowl.glb: a lathed ceramic bowl plus a displaced food mound.
-The mound is real geometry textured with a crop of the licensed Unsplash bowl photo
-(assets/photos/salad.jpg) and a normal map derived from that same photo."""
+The food uses a photographic colour texture with baked light, so it is unlit in the GLB
+to preserve its original contrast under the bright website studio lights."""
 from pathlib import Path
 import io, json, struct
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image, ImageEnhance
 from scipy.ndimage import map_coordinates, gaussian_filter
 
 ROOT = Path(__file__).resolve().parents[1]
 photo = Image.open(ROOT / 'assets/photos/salad.jpg').convert('RGB')
 cx, cy, rad = 757, 455, 398
 crop = photo.crop((cx - rad, cy - rad, cx + rad, cy + rad)).resize((1024, 1024), Image.LANCZOS)
+crop = ImageEnhance.Color(crop).enhance(1.08)
+crop = ImageEnhance.Contrast(crop).enhance(1.06)
 gray = np.asarray(crop.convert('L'), dtype=np.float32) / 255
-# normal map from fine luminance detail
-hp = gaussian_filter(gray, 0.8)
-gx = np.gradient(hp, axis=1) * 5.0; gy = np.gradient(hp, axis=0) * 5.0
-n = np.dstack([-gx, gy, np.ones_like(gx)]); n /= np.linalg.norm(n, axis=2, keepdims=True)
-nm = Image.fromarray(((n * 0.5 + 0.5) * 255).astype(np.uint8))
 def jpg(im, q): b = io.BytesIO(); im.save(b, 'JPEG', quality=q, optimize=True); return b.getvalue()
-color_jpg, normal_jpg = jpg(crop, 88), jpg(nm, 90)
+color_jpg = jpg(crop, 90)
 coarse = gaussian_filter(gray, 7); coarse = (coarse - coarse.mean()) / (np.abs(coarse - coarse.mean()).max() + 1e-6)
 
 # ---- ceramic bowl (lathe) ----
-A, B, YC, T = 1.0, 0.46, 0.50, 0.06          # outer half-width / depth / rim height / wall
+A, B, YC, T = 1.0, 0.64, 0.72, 0.07          # outer half-width / depth / rim height / wall
 Ai, Bi = A - T, B - T
 prof = []
 for th in np.linspace(0, np.pi / 2, 28):      # inner floor -> rim
@@ -56,7 +53,7 @@ tri = bpos[bidx[:3]]; fn = np.cross(tri[1] - tri[0], tri[2] - tri[0])
 if np.dot(fn, bnor[bidx[:3]].mean(0)) < 0: bidx = bidx.reshape(-1, 3)[:, ::-1].reshape(-1)
 
 # ---- food mound (displaced disc) ----
-YF = 0.40
+YF = 0.56
 cos_t = (YC - YF) / Bi; R = Ai * np.sqrt(1 - cos_t ** 2) - 0.004
 RINGS, SEGF = 64, 144
 fpos, fuv = [(0, 0)], []
@@ -98,19 +95,19 @@ def add_acc(arr, ctype, atype, target, minmax=False):
 F, U = 5126, 5125
 b_p = add_acc(bpos, F, 'VEC3', 34962, True); b_n = add_acc(bnor, F, 'VEC3', 34962); b_i = add_acc(bidx, U, 'SCALAR', 34963)
 f_p = add_acc(fp, F, 'VEC3', 34962, True); f_n = add_acc(fn.astype(np.float32), F, 'VEC3', 34962); f_t = add_acc(fuv, F, 'VEC2', 34962); f_i = add_acc(fi, U, 'SCALAR', 34963)
-img_c = add_view(color_jpg); img_n = add_view(normal_jpg)
+img_c = add_view(color_jpg)
 gltf = {
-    'asset': {'version': '2.0', 'generator': 'tools/make_bowl.py'},
+    'asset': {'version': '2.0', 'generator': 'tools/make_bowl.py'}, 'extensionsUsed': ['KHR_materials_unlit'],
     'scene': 0, 'scenes': [{'nodes': [0]}], 'nodes': [{'name': 'bowl', 'mesh': 0}],
     'meshes': [{'name': 'bowl', 'primitives': [
         {'attributes': {'POSITION': b_p, 'NORMAL': b_n}, 'indices': b_i, 'material': 0},
         {'attributes': {'POSITION': f_p, 'NORMAL': f_n, 'TEXCOORD_0': f_t}, 'indices': f_i, 'material': 1}]}],
     'materials': [
-        {'name': 'ceramic', 'doubleSided': True, 'pbrMetallicRoughness': {'baseColorFactor': [0.62, 0.59, 0.53, 1], 'metallicFactor': 0, 'roughnessFactor': 0.46}},
-        {'name': 'food', 'pbrMetallicRoughness': {'baseColorTexture': {'index': 0}, 'metallicFactor': 0, 'roughnessFactor': 0.62}, 'normalTexture': {'index': 1, 'scale': 1.0}}],
-    'textures': [{'source': 0, 'sampler': 0}, {'source': 1, 'sampler': 0}],
+        {'name': 'ceramic', 'doubleSided': True, 'pbrMetallicRoughness': {'baseColorFactor': [0.20, 0.27, 0.22, 1], 'metallicFactor': 0, 'roughnessFactor': 0.52}},
+        {'name': 'food', 'extensions': {'KHR_materials_unlit': {}}, 'pbrMetallicRoughness': {'baseColorTexture': {'index': 0}, 'metallicFactor': 0, 'roughnessFactor': 1}}],
+    'textures': [{'source': 0, 'sampler': 0}],
     'samplers': [{'magFilter': 9729, 'minFilter': 9987, 'wrapS': 33071, 'wrapT': 33071}],
-    'images': [{'bufferView': img_c, 'mimeType': 'image/jpeg'}, {'bufferView': img_n, 'mimeType': 'image/jpeg'}],
+    'images': [{'bufferView': img_c, 'mimeType': 'image/jpeg'}],
     'accessors': accessors, 'bufferViews': views, 'buffers': [{'byteLength': len(blob)}]}
 js = json.dumps(gltf, separators=(',', ':')).encode()
 while len(js) % 4: js += b' '

@@ -18,7 +18,7 @@ The current hero uses two genuine food scans: a public-domain avocado by Nodef a
 ## Next-level extension opportunities
 
 - DONE: scroll-directed stage. `scene.js` blends DOM landing pads (`#scene-wrap`, `.story-slot`, `.menu-slot`) by proximity to the viewport centre; add a pad to `pads[]` to add a stop. Intro pop-in and canvas contact shadows are in too; profile on a real phone.
-- Replace or supplement these ingredients with a commercially reusable, photogrammetry-quality bowl or pizza GLB. Integrate the model itself, its textures and required attribution. Some candidate hosts blocked automated downloads; their files are not included.
+- Replace the generated bowl (`tools/make_bowl.py`) with a commercially reusable, photogrammetry-quality bowl or pizza GLB if one can be obtained. Integrate the model itself, its textures and required attribution. Some candidate hosts blocked automated downloads; their files are not included.
 - Add restrained model reveal transitions and contact shadows after profiling on a real phone.
 - Use actual restaurant ordering/reservation links only after the owner supplies them.
 
@@ -31,3 +31,7 @@ Keep photorealism and appetite appeal above the number of effects. Preserve the 
 `scene.js` normalizes model bounds, composes the two models, exposes drag / keyboard / zoom / reset interactions, and renders only while visible. It uses ACES tone mapping, a PMREM studio environment and directional lighting. Two ingredient choices switch the staging. Automatic float motion pauses for prefers-reduced-motion and the page pause control.
 
 After changes run `python3 tools/package.py`. Only run npm if modifying the bundled vendor runtime. Before production release, verify the real browser render, mobile performance and content with the restaurant.
+
+## Added: bowl and 3D lettering
+
+`scene.js` now has three models (bowl, avocado, citrus) with `layout[lead]` compositions blended by pad, and `lettering` blocks that extrude `text-data.js` glyphs at the positions of `.t3d-line` DOM spans (hero h1, footer wordmark). The DOM text turns transparent only after the meshes are ready (`html.text3d`). New copy in those elements needs its characters added to `tools/make_text_data.py`.

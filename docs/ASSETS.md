@@ -47,8 +47,11 @@ https://unsplash.com/license permits commercial website use and distribution as 
 | `assets/photos/salad.jpg` | Anna Pelzer | https://unsplash.com/photos/IGfIGP5ONV0 |
 | `assets/photos/pizza.jpg` | Ivan Torres | https://unsplash.com/photos/MQUqbmszGGM |
 | `assets/photos/sandwich.jpg` | Pille R. Priske | https://unsplash.com/photos/U0PiIS4Uvkc |
+| `assets/photos/rail-food.jpg` | Elena Leya | https://unsplash.com/photos/a-colorful-salad-bowl-with-many-fresh-ingredients-_vy3L5n8VnI |
+| `assets/photos/rail-people.jpg` | Juan Pablo Lara | https://unsplash.com/photos/people-sharing-various-pizzas-and-appetizers-at-a-table-wVd7ZqPl5nk |
+| `assets/photos/rail-time.jpg` | Daniel | https://unsplash.com/photos/pizzas-on-plates-on-a-table-JcTGyFY6lWk |
 
-The bowl photo is 1400 px wide, pizza 1200 px and sandwich 1000 px. The menu labels them representative category imagery. Do not claim they show an exact Clock To Fit menu item.
+The bowl photo is 1400 px wide, pizza 1200 px and sandwich 1000 px. The three horizontal-panel images are locally stored at 1400 px wide. The menu labels its images representative category imagery. Do not claim any photo shows an exact Clock To Fit menu item or location.
 
 ## Runtime, fonts and original design
 

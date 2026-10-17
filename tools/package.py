@@ -1,6 +1,6 @@
 """Regenerate embedded models, standalone HTML and source ZIP using Python 3."""
 from pathlib import Path
-import base64, json, mimetypes, re, zipfile
+import base64, json, mimetypes, re, sys, zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 def data_uri(path):
@@ -15,7 +15,7 @@ css = (ROOT/'style.css').read_text()
 css = re.sub(r"url\(['\"]?([^)'\"\s]+)['\"]?\)", lambda m: "url('"+data_uri(ROOT/m[1])+"')", css)
 html = html.replace('<link rel="stylesheet" href="style.css">','<style>'+css+'</style>')
 html = re.sub(r'  <script src="[^\"]+" defer></script>\n','',html)
-for rel in ['assets/favicon.svg','assets/photos/salad.jpg']:
+for rel in ['assets/favicon.svg','assets/photos/salad.jpg','assets/photos/rail-food.jpg','assets/photos/rail-people.jpg','assets/photos/rail-time.jpg']:
     html = html.replace(rel,data_uri(ROOT/rel))
 photos = {name:data_uri(ROOT/'assets/photos'/f'{name}.jpg') for name in ('salad','pizza','sandwich')}
 scripts = ['window.CTF_PHOTOS='+json.dumps(photos,separators=(',',':'))+';']
@@ -24,9 +24,12 @@ html = html.replace('</body>', '\n'.join('<script>'+script.replace('</script','<
 preview = ROOT/'Clock-To-Fit-Preview.html'
 preview.write_text(html)
 
-archive = ROOT/'Clock-To-Fit-Source.zip'
-with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=8) as z:
-    for p in sorted(ROOT.rglob('*')):
-        if not p.is_file() or p == archive or p.name == '.DS_Store' or any(part in p.parts for part in ('.git', 'node_modules', '__pycache__')): continue
-        z.write(p,Path('clock-to-fit')/p.relative_to(ROOT))
-print(json.dumps({'preview':str(preview),'preview_bytes':preview.stat().st_size,'source':str(archive),'source_bytes':archive.stat().st_size},indent=2))
+result = {'preview':str(preview),'preview_bytes':preview.stat().st_size}
+if '--preview-only' not in sys.argv:
+    archive = ROOT/'Clock-To-Fit-Source.zip'
+    with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=8) as z:
+        for p in sorted(ROOT.rglob('*')):
+            if not p.is_file() or p == archive or p.name == '.DS_Store' or any(part in p.parts for part in ('.git', 'node_modules', '__pycache__')): continue
+            z.write(p,Path('clock-to-fit')/p.relative_to(ROOT))
+    result.update(source=str(archive),source_bytes=archive.stat().st_size)
+print(json.dumps(result,indent=2))

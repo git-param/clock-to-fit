@@ -68,6 +68,13 @@ def run(width, height, name):
     time.sleep(1)
     middle = call(ws, 'Page.captureScreenshot', {'format':'png', 'captureBeyondViewport':False})['data']
     (OUT / f'ctf-{name}-rail.png').write_bytes(base64.b64decode(middle))
+    for step, panel_name in ((0, 'food'), (.5, 'mood'), (1, 'time')):
+        evaluate(ws, f"(() => {{ const r=document.querySelector('.word-rail'); scrollTo({{top:r.getBoundingClientRect().top+scrollY+{step}*(r.offsetHeight-innerHeight),behavior:'instant'}}); dispatchEvent(new Event('scroll')); return true }})()")
+        time.sleep(.5)
+        state = evaluate(ws, f"(() => {{ const p=document.querySelector('.word-panel-{panel_name}'); const photo=p.querySelector('img').getBoundingClientRect(); const word=p.querySelector('h2').getBoundingClientRect(); return {{loaded:p.querySelector('img').naturalWidth>0, photo:[photo.left,photo.top,photo.right,photo.bottom], word:[word.left,word.top,word.right,word.bottom], overflow:document.documentElement.scrollWidth-innerWidth}} }})()")
+        picture = call(ws, 'Page.captureScreenshot', {'format':'png', 'captureBeyondViewport':False})['data']
+        (OUT / f'ctf-{name}-{panel_name}.png').write_bytes(base64.b64decode(picture))
+        print(name, panel_name, json.dumps(state))
     print(name, json.dumps(result))
     if name == 'desktop':
         call(ws, 'Emulation.setEmulatedMedia', {'features':[{'name':'prefers-reduced-motion','value':'reduce'}]})

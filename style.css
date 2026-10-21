@@ -10,7 +10,7 @@
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}.reveal{opacity:1!important;transform:none!important}}
 
 /* Textured model hero and full-resolution editorial photography. */
-.hero-visual{isolation:isolate}
+.hero-visual{isolation:auto}
 .scene-orbit{width:86%;left:9%;top:7%;background:#eac9a8;transition:background .7s,border-radius .7s;border-radius:48% 52% 43% 57% / 52% 43% 57% 48%}
 .scene-orbit:after{border-color:#cfac88;inset:26px}
 .hero-visual[data-ingredient=citrus] .scene-orbit{background:#d5df79;border-radius:45% 55% 52% 48% / 48% 48% 52% 52%}
@@ -107,3 +107,10 @@
 @media(max-width:760px){.word-panel{padding:35px 6%}.word-panel-top,.word-panel-bottom{font-size:8px;letter-spacing:1px}.word-panel-center h2{font-size:clamp(48px,12vw,90px)}.word-panel-center p{font-size:15px}.word-panel-photo{top:14%;right:10%;width:min(52vw,270px);padding:5px 5px 0;box-shadow:0 14px 30px #132b1d30}.word-panel-photo figcaption{font-size:7px;padding:6px 3px 7px}.word-rail-count{bottom:72px}}
 @media(max-width:380px){.word-panel-center h2{font-size:11.5vw}}
 @media(prefers-reduced-motion:reduce){.word-rail{height:auto!important}.word-rail-viewport{position:relative;height:auto;overflow:visible}.word-rail-track{display:block;width:100%;transform:none!important}.word-panel{height:auto;min-height:72vh}.word-rail-count{display:none}}
+
+/* Give every header control its own space on small phones. */
+@media(max-width:360px){.brand{font-size:23px;gap:6px}.brand>svg{width:36px}.header-actions{gap:6px}.motion-toggle{width:30px;height:30px;flex:none}.header .pill-small{min-height:38px;padding:8px 10px;gap:8px;font-size:10px}.header .pill-small>span{font-size:19px}.nav-toggle{padding:3px}.nav-toggle span{width:20px}}
+
+/* The fixed WebGL canvas sits above the page; keep hero copy and controls readable over it. */
+.hero-copy,.hero-bottom{position:relative;z-index:21}
+.scene-kicker,.food-stamp,.ingredient-note,.scene-toolbar,.scene-help,.scene-loading{z-index:21}

@@ -175,7 +175,10 @@
       const lean = paused ? 0 : 1;
       let rx = -tiltY * 0.16 * lean, ry = tiltX * 0.26 * lean;
       if (block.mode === 'hero') rx -= smooth01(0, 1, scrollY / (vh * 0.75)) * 0.9 * (paused ? 0 : 1);
-      else if (block.mode === 'footer') rx += (1 - smooth01(0, 1, (vh - rect.top) / (vh * 0.3))) * 1.15 * (paused ? 0 : 1);
+      else if (block.mode === 'footer') {
+        if (vw <= 760) rx = ry = 0;
+        else rx += (1 - smooth01(0, 1, (vh - rect.top) / (vh * 0.3))) * 1.15 * (paused ? 0 : 1);
+      }
       else rx += (1 - smooth01(0, 1, (vh - rect.top) / (vh * 0.5))) * 0.32 * (paused ? 0 : 1);
       block.group.rotation.set(rx, ry, 0);
       block.lines.forEach((line, i) => {
@@ -208,26 +211,37 @@
   const v3 = new T.Vector3();
   // Blend the pads by how close each one is to the viewport's middle band.
   function placeRig(upp) {
-    let sum = 0, sx = 0, sy = 0, ss = 0, conf = 0;
+    let sum = 0, sx = 0, sy = 0, ss = 0, conf = 0, heroWeight = 0;
     // The focus line starts on the hero pad (so the hero is never pulled toward a nearby section)
     // and drifts to the middle of the viewport as the visitor scrolls.
     const first = pads[0].el.getBoundingClientRect();
     const heroY = Math.min(first.top + scrollY + first.height / 2, vh * 0.85);
     const focus = T.MathUtils.lerp(heroY, vh * 0.5, smooth(0, vh * 0.6, scrollY));
+    const mobileStage = vw <= 760;
+    const heroStage = first.bottom > vh * 0.35;
     for (const pad of pads) {
+      // The phone viewport has no room to show the trip across the review row.
+      if (mobileStage && (heroStage ? pad !== pads[0] : pad === pads[0])) continue;
       const r = pad.el.getBoundingClientRect();
       if (r.width < 8 || r.height < 8 || r.bottom < -vh * 0.6 || r.top > vh * 1.6) continue;
       const cy = r.top + r.height / 2, d = (cy - focus) / (vh * 0.42);
       const w = Math.exp(-d * d);
+      if (pad === pads[0]) heroWeight = w;
       sum += w; conf = Math.max(conf, w);
       sx += w * (r.left + r.width / 2); sy += w * cy; ss += w * Math.min(r.width, r.height);
     }
     if (sum < 1e-4) return 0;
     const k = 1 / sum;
     // Dip slightly while travelling between pads, and shrink away after the last one.
-    const visible = smooth(0.03, 0.32, conf) * (0.62 + 0.38 * smooth(0.3, 0.9, conf));
+    let visible = smooth(0.03, 0.32, conf) * (0.62 + 0.38 * smooth(0.3, 0.9, conf));
+    if (mobileStage) visible *= heroStage
+      ? smooth(vh * 0.35, vh * 0.55, first.bottom)
+      : 1 - smooth(vh * 0.15, vh * 0.35, first.bottom);
+    const mobileHero = vw <= 760 ? heroWeight * k : 0;
+    const heroScale = T.MathUtils.lerp(0.72, 0.82, T.MathUtils.clamp((vw - 320) / 120, 0, 1));
+    // Keep the hero bowl inside its orbit and clear of the controls on narrow screens.
     rig.position.set((sx * k - vw / 2) * upp, -(sy * k - vh / 2) * upp, 0);
-    rig.scale.setScalar(upp * ss * k / FRAME_UNITS * zoom * visible);
+    rig.scale.setScalar(upp * ss * k / FRAME_UNITS * zoom * visible * (1 - mobileHero * (1 - heroScale)));
     return visible;
   }
 
@@ -250,7 +264,7 @@
     if (foodOn) {
       const hover = !paused && !drag;
       // Scroll-directed turn: roughly a third of a revolution per viewport of travel.
-      const scrollSpin = paused ? 0 : (scrollY / vh) * 2.1;
+      const scrollSpin = paused || vw <= 760 ? 0 : (scrollY / vh) * 2.1;
       spin.rotation.set(pitch + (hover ? pointerY * 0.06 : 0), yaw + scrollSpin + (hover ? pointerX * 0.1 : 0), 0);
       NAMES.forEach(name => {
         const group = models[name];

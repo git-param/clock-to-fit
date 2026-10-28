@@ -198,6 +198,17 @@
     { img:'salad', pos:'22% 55%', cap:'Colour on a plate', r:-2.5 }, { img:'sandwich', pos:'60% 30%', cap:'Lunch break', r:2 }
   ];
   const feedGrid = $('#feed-grid');
+  // The third-party player is created only after a visitor asks to watch.
+  // Until then the reel costs no Instagram requests or video bytes.
+  const reelFrame = $('#featured-reel');
+  reelFrame?.querySelector('.reel-play')?.addEventListener('click', () => {
+    const player = document.createElement('iframe');
+    player.src = 'https://www.instagram.com/reel/DdGRyE9id0Q/embed/';
+    player.title = 'Clock To Fit Instagram reel';
+    player.allow = 'autoplay; encrypted-media; picture-in-picture; web-share';
+    player.referrerPolicy = 'strict-origin-when-cross-origin';
+    reelFrame.replaceChildren(player);
+  }, { once: true });
   if (feedGrid) {
     feedGrid.innerHTML = feedDefaults.map((tile, i) => {
       const post = SITE.feed[i] || {};

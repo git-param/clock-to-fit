@@ -1,6 +1,6 @@
 """Regenerate embedded models, standalone HTML and source ZIP using Python 3."""
 from pathlib import Path
-import base64, json, mimetypes, re, zipfile
+import base64, json, mimetypes, re, sys, zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 def data_uri(path):
@@ -24,12 +24,14 @@ scripts += [(ROOT/name).read_text() for name in ['vendor/three-runtime.js','mode
 html = html.replace('</body>', '\n'.join('<script>'+script.replace('</script','<\\/script')+'</script>' for script in scripts)+'\n</body>')
 preview = ROOT/'Clock-To-Fit-Preview.html'
 preview.write_text(html)
-outside = ROOT.parent/'Clock-To-Fit-Preview.html'
-outside.write_text(html)
-
-archive = ROOT.parent/'Clock-To-Fit-Source.zip'
-with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=8) as z:
-    for p in sorted(ROOT.rglob('*')):
-        if not p.is_file() or 'node_modules' in p.parts or '__pycache__' in p.parts: continue
-        z.write(p,Path('clock-to-fit')/p.relative_to(ROOT))
-print(json.dumps({'preview':str(outside),'preview_bytes':outside.stat().st_size,'source':str(archive),'source_bytes':archive.stat().st_size},indent=2))
+if '--local-only' in sys.argv:
+    print(json.dumps({'preview':str(preview),'preview_bytes':preview.stat().st_size},indent=2))
+else:
+    outside = ROOT.parent/'Clock-To-Fit-Preview.html'
+    outside.write_text(html)
+    archive = ROOT.parent/'Clock-To-Fit-Source.zip'
+    with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=8) as z:
+        for p in sorted(ROOT.rglob('*')):
+            if not p.is_file() or 'node_modules' in p.parts or '__pycache__' in p.parts: continue
+            z.write(p,Path('clock-to-fit')/p.relative_to(ROOT))
+    print(json.dumps({'preview':str(outside),'preview_bytes':outside.stat().st_size,'source':str(archive),'source_bytes':archive.stat().st_size},indent=2))

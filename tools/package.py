@@ -1,6 +1,6 @@
 """Regenerate embedded models, standalone HTML and source ZIP using Python 3."""
 from pathlib import Path
-import base64, json, mimetypes, re, sys, zipfile
+import base64, json, mimetypes, re, zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 def data_uri(path):
@@ -14,22 +14,22 @@ html = (ROOT/'index.html').read_text()
 css = (ROOT/'style.css').read_text()
 css = re.sub(r"url\(['\"]?([^)'\"\s]+)['\"]?\)", lambda m: "url('"+data_uri(ROOT/m[1])+"')", css)
 html = html.replace('<link rel="stylesheet" href="style.css">','<style>'+css+'</style>')
+html = re.sub(r'  <link rel="preload"[^>]*>\n','',html)
 html = re.sub(r'  <script src="[^\"]+" defer></script>\n','',html)
-for rel in ['assets/favicon.svg','assets/photos/salad.jpg','assets/photos/rail-food.jpg','assets/photos/rail-people.jpg','assets/photos/rail-time.jpg']:
+for rel in ['assets/favicon.svg','assets/photos/salad.webp','assets/photos/pizza.webp','assets/photos/sandwich.webp']:
     html = html.replace(rel,data_uri(ROOT/rel))
-photos = {name:data_uri(ROOT/'assets/photos'/f'{name}.jpg') for name in ('salad','pizza','sandwich')}
+photos = {name:data_uri(ROOT/'assets/photos'/f'{name}.webp') for name in ('salad','pizza','sandwich')}
 scripts = ['window.CTF_PHOTOS='+json.dumps(photos,separators=(',',':'))+';']
-scripts += [(ROOT/name).read_text() for name in ['vendor/three-runtime.js','model-data.js','text-data.js','script.js','scene.js']]
+scripts += [(ROOT/name).read_text() for name in ['vendor/three-runtime.js','model-data.js','text-data.js','site-config.js','script.js','scene.js']]
 html = html.replace('</body>', '\n'.join('<script>'+script.replace('</script','<\\/script')+'</script>' for script in scripts)+'\n</body>')
 preview = ROOT/'Clock-To-Fit-Preview.html'
 preview.write_text(html)
+outside = ROOT.parent/'Clock-To-Fit-Preview.html'
+outside.write_text(html)
 
-result = {'preview':str(preview),'preview_bytes':preview.stat().st_size}
-if '--preview-only' not in sys.argv:
-    archive = ROOT/'Clock-To-Fit-Source.zip'
-    with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=8) as z:
-        for p in sorted(ROOT.rglob('*')):
-            if not p.is_file() or p == archive or p.name == '.DS_Store' or any(part in p.parts for part in ('.git', 'node_modules', '__pycache__')): continue
-            z.write(p,Path('clock-to-fit')/p.relative_to(ROOT))
-    result.update(source=str(archive),source_bytes=archive.stat().st_size)
-print(json.dumps(result,indent=2))
+archive = ROOT.parent/'Clock-To-Fit-Source.zip'
+with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=8) as z:
+    for p in sorted(ROOT.rglob('*')):
+        if not p.is_file() or 'node_modules' in p.parts or '__pycache__' in p.parts: continue
+        z.write(p,Path('clock-to-fit')/p.relative_to(ROOT))
+print(json.dumps({'preview':str(outside),'preview_bytes':outside.stat().st_size,'source':str(archive),'source_bytes':archive.stat().st_size},indent=2))

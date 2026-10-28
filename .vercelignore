@@ -1,0 +1,12 @@
+# Keep the deploy to what the live site needs.
+Clock-To-Fit-Preview.html
+Clock-To-Fit-Source.zip
+model-data.js
+tools/
+docs/
+CLAUDE-HANDOFF.md
+README.md
+package.json
+node_modules/
+vendor/entry.js
+assets/*.ttf

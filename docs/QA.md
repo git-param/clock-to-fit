@@ -16,14 +16,10 @@ Still required: a physical-phone pass for frame rate (the full-viewport canvas i
 
 Verified in headless Chromium (SwiftShader WebGL): bowl.glb parses and renders with its photographed mound; hero headline and footer wordmark meshes align with the DOM text (side-by-side comparison, kerning matched via per-character Range measurements); hero pad stays on the hero near the top of short viewports (tablet fix); models hand off hero -> story -> menu without strays; toolbar (Bowl / Avocado / Citrus), zoom/reset keys, pause toggle, menu filters, dialog, tel link all work; prefers-reduced-motion keeps static face-on lettering; a blocked WebGL context falls back to the DOM headline and the stock photo with no console errors.
 
-Known limits: software rendering is slow, so screenshots needed multi-second settles; real-GPU frame rate and touch drag are untested. Text colours are pre-scaled and not tone-mapped to hold the brand palette, so re-check them if lights change. The extruded lettering covers the hero headline, pinned-panel words and footer wordmark; the remaining section headings use a system italic serif that cannot be extruded.
+Known limits: software rendering is slow, so screenshots needed multi-second settles; real-GPU frame rate and touch drag are untested. Text colours are pre-scaled and not tone-mapped to hold the brand palette, so re-check them if lights change. The 3D lettering covers only the hero headline and footer wordmark; the section headings use a system italic serif that cannot be extruded.
 
-## Added 17 October 2026 — pinned word sequence
+## Added 28 October 2026 — review follow-up
 
-Rendered in headless Chrome at 1440×900, 820×1100 and 390×844. The three panels occupied exactly one viewport width each, the rail advanced to its first, middle and last panels at 0%, 50% and 100% of the pinned scroll distance, and document width stayed within the viewport. The bowl and extruded lettering reached ready state at all three sizes. Mid-scroll screenshots confirmed the new 3D words appear against their panel colours. Reduced-motion mode stacked the panels vertically with no track transform. The standalone HTML also opened from a `file:` URL with 3D and all three panels ready.
+Verified over local HTTP and the standalone file (headless Chromium): bowl loads from assets/models first, avocado and mandarin pop in when idle; no console errors; hero, hscroll, feed, visit and footer at 1440, 820 and 390 wide without horizontal overflow; header pill expands on hover; hero follow badge, polaroid feed, DM and Tag-us buttons, footer handle (3D on capable devices), phone dock; Jain badge on the one item flagged in the supplied menu; owner config (WhatsApp/Zomato, hours, feed posts) renders when set and nothing renders when empty; `?3d=lite` keeps flat text, `?3d=off` shows photos; reduced motion and blocked WebGL still fall back cleanly.
 
-Physical phone frame rate and touch drag remain to be checked before publication.
-
-## Follow-up 17 October 2026 — one model per selection
-
-The Bowl, Avocado and Citrus controls were checked in Chromium: each state renders one selected model without the other ingredients. The chosen model remains the only visible food model as it follows the scroll pads. The bowl was rebuilt with a deeper ceramic profile, a darker green glaze and a higher-contrast photographic food surface. The standalone HTML loaded the revised GLB from a local file URL.
+Not possible offline here: meshopt/Draco model compression and WOFF2 (no encoder available), so fonts ship as WOFF and models as plain GLB. Real-GPU frame rate, touch behaviour and Core Web Vitals still need a device test after deploy.

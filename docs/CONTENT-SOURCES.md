@@ -49,3 +49,7 @@ The primary site was available through search indexing after the initial direct 
 ## Current visual direction — 17 October 2026
 
 The user explicitly authorized third-party food imagery instead of actual restaurant photographs. The revised site uses public-domain / Creative Commons photogrammetry ingredient models and licensed Unsplash photography. No Google Maps screenshot crop is used as an image. Models and photos are representative visual concepts, not evidence of ingredients in a particular dish. See ASSETS.md for exact sources and licenses.
+
+## Update 28 October 2026
+
+The site owner confirmed the Instagram handle @clocktofitamd (https://www.instagram.com/clocktofitamd/) and that the site is now presented as official, so developer-note wording ("supplied listing", "concept", "not an official ordering site") was removed. Still not supplied and therefore not shown: opening hours, WhatsApp/Zomato/Swiggy links, real Instagram post URLs, vegetarian labelling (only the "Chargrilled Vegetable Sub" Jain option from the original menu is badged). The feed tiles are illustrative stock photos linking to the profile until real posts are added in `site-config.js`.

@@ -1,9 +1,10 @@
 /* Textured glTF food + extruded lettering — scroll-directed stage. Edit directly; no build step.
  *
  * One fixed, pointer-transparent canvas covers the viewport.
- *  • Food: the selected bowl or ingredient scan is anchored to DOM landing pads (hero stage →
- *    story sticker → menu badge). The pads' live rects are blended by proximity to the viewport
- *    centre, so the selected object glides between sections and shrinks away at the menu grid.
+ *  • Food: a bowl (generated GLB with a photographed, displaced food mound) and two photogrammetry
+ *    scans are "anchored" to DOM landing pads (hero stage → story sticker → menu badge). Each frame the
+ *    pads' live rects are blended by proximity to the viewport centre, so the objects glide between
+ *    sections, trade which one leads, and shrink away once the menu grid arrives.
  *  • Lettering: the hero headline and footer wordmark are real extruded, bevelled Bricolage glyph
  *    geometry that tracks its DOM text pixel-for-pixel, leans toward the pointer, and folds up on scroll.
  * Native scrolling is never intercepted. Dragging, keys and zoom work on the hero pad. */
@@ -18,11 +19,11 @@
   const buttons = [...document.querySelectorAll('[data-scene], [data-view]')];
   const NAMES = ['bowl', 'avocado', 'citrus'];
   const LABEL = { bowl:'bowl', avocado:'avocado', citrus:'mandarin' };
-  // Ordered landing pads for the currently selected model.
+  // Ordered landing pads. `lead` is which object stars there; null = the visitor's hero choice.
   const pads = [
-    { el: wrap },
-    { el: document.querySelector('.story-slot') },
-    { el: document.querySelector('.menu-slot') }
+    { el: wrap, lead: null },
+    { el: document.querySelector('.story-slot'), lead: 'avocado' },
+    { el: document.querySelector('.menu-slot'), lead: 'bowl' }
   ].filter(pad => pad.el);
 
   let renderer, frame = 0, contextLost = false;
@@ -35,8 +36,12 @@
     buttons.forEach(button => { button.disabled = true; });
     help.textContent = status.textContent = message;
   }
-  if (!window.CTF3D || !window.CTF_MODELS) {
-    fallback('Food photography shown. The 3D viewer is unavailable.'); return;
+  // Policy for weak connections / devices. Override with ?3d=full or ?3d=lite while testing.
+  const forced = new URLSearchParams(location.search).get('3d');
+  const saveData = forced !== 'full' && (navigator.connection?.saveData === true || forced === 'off');
+  const lite = forced === 'lite' || (forced !== 'full' && innerWidth <= 760 && ((navigator.deviceMemory || 8) <= 4 || (navigator.hardwareConcurrency || 8) <= 4));
+  if (!window.CTF3D || saveData) {
+    fallback(saveData ? 'Food photography shown to respect Data Saver.' : 'Food photography shown. The 3D viewer is unavailable.'); return;
   }
   const { THREE: T, GLTFLoader, RoomEnvironment } = window.CTF3D;
   const FOV = 34, DIST = 7.4, FRAME_UNITS = 4.5;   // 4.5 scene units ≈ one pad height
@@ -44,7 +49,7 @@
   try {
     renderer = new T.WebGLRenderer({ canvas, alpha:true, antialias:true, powerPreference:'high-performance' });
     const small = Math.min(innerWidth, innerHeight) < 600;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, small ? 1.5 : 1.75));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lite ? 1.25 : small ? 1.5 : 1.75));
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = T.SRGBColorSpace;
     renderer.toneMapping = T.ACESFilmicToneMapping;
@@ -78,21 +83,53 @@
   let paused = root.classList.contains('motion-paused');
   let ready = false, disposed = false, selected = 'bowl';
   let yaw = 0, pitch = 0, zoom = 1, targetYaw = 0, targetPitch = 0, targetZoom = 1;
-  let pointerX = 0, pointerY = 0, drag = null, lastTime = 0, phase = 0, introStart = -1, selectionStart = -1;
+  let pointerX = 0, pointerY = 0, drag = null, lastTime = 0, phase = 0, introStart = -1;
   let pageX = 0, pageY = 0, tiltX = 0, tiltY = 0;       // window-wide pointer for lettering lean
-  let vw = 1, vh = 1;
+  let vw = 1, vh = 1, layoutVersion = 0;
+  const heroLead = { bowl:1, avocado:0, citrus:0 };
   const models = {}, shadows = {};
-  // Each choice fills the stage on its own.
+  // Composition in pad units for each "who leads" state.
   const layout = {
-    bowl:{position:[0,-0.2,0], scale:3.85, rotation:[0.68,0.2,0]},
-    avocado:{position:[0,0,0], scale:3.55, rotation:[-1.1,-0.35,-0.4]},
-    citrus:{position:[0,0,0], scale:3.55, rotation:[0.05,-0.1,-0.16]}
+    bowl: {
+      bowl:{position:[0.02,-0.45,0], scale:3.55, rotation:[0.72,0.2,0]},
+      avocado:{position:[1.42,1.32,0.5], scale:1.0, rotation:[-0.9,0.4,-0.1]},
+      citrus:{position:[-1.38,1.2,0.35], scale:1.05, rotation:[0.16,0.3,0.18]}
+    },
+    avocado: {
+      avocado:{position:[0.18,-0.05,0], scale:3.25, rotation:[-1.1,-0.35,-0.4]},
+      citrus:{position:[-1.2,1.18,-0.4], scale:1.05, rotation:[0.16,0.3,0.18]},
+      bowl:{position:[1.15,-1.2,-0.5], scale:1.55, rotation:[0.7,0.3,0.1]}
+    },
+    citrus: {
+      citrus:{position:[0.05,0.02,0], scale:3.35, rotation:[0.05,-0.1,-0.16]},
+      avocado:{position:[1.18,1.12,-0.5], scale:0.95, rotation:[-0.9,0.4,-0.1]},
+      bowl:{position:[-1.15,-1.25,-0.5], scale:1.55, rotation:[0.7,-0.3,-0.1]}
+    }
   };
   const FLOOR = -2.1;
   const loader = new GLTFLoader();
+  // Models are normal files on a server (assets/models/*.glb). The standalone preview embeds them as
+  // data URIs instead, and a local file:// open falls back to model-data.js.
+  function embeddedModels() {
+    if (window.CTF_MODELS) return Promise.resolve(window.CTF_MODELS);
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script'); script.src = 'model-data.js';
+      script.onload = () => resolve(window.CTF_MODELS); script.onerror = reject; document.head.appendChild(script);
+    });
+  }
+  async function fetchModel(name) {
+    if (window.CTF_MODELS?.[name]) return (await fetch('data:model/gltf-binary;base64,' + window.CTF_MODELS[name])).arrayBuffer();
+    try {
+      const response = await fetch(`assets/models/${name}.glb`);
+      if (!response.ok) throw new Error(response.statusText);
+      return await response.arrayBuffer();
+    } catch (error) {
+      const embedded = await embeddedModels();
+      return (await fetch('data:model/gltf-binary;base64,' + embedded[name])).arrayBuffer();
+    }
+  }
   function loadModel(name) {
-    const bytes = Uint8Array.from(atob(window.CTF_MODELS[name]), char => char.charCodeAt(0));
-    return new Promise((resolve, reject) => loader.parse(bytes.buffer, '', gltf => {
+    return fetchModel(name).then(buffer => new Promise((resolve, reject) => loader.parse(buffer, '', gltf => {
       const model = gltf.scene;
       const bounds = new T.Box3().setFromObject(model);
       const size = bounds.getSize(new T.Vector3()), center = bounds.getCenter(new T.Vector3());
@@ -103,24 +140,25 @@
         const materials = Array.isArray(object.material) ? object.material : [object.material];
         materials.forEach(material => {
           if (material.map) material.map.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-          material.envMapIntensity = name === 'bowl' ? 0.3 : 0.8;
+          material.envMapIntensity = 0.8;
         });
       });
       const group = new T.Group(); group.name = name; group.add(model); spin.add(group);
       const shadow = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({ map:shadowTexture, transparent:true, depthWrite:false, depthTest:false, toneMapped:false }));
       shadow.renderOrder = -1; rig.add(shadow);
+      group.userData.born = performance.now();
       models[name] = group; shadows[name] = shadow; resolve(group);
-    }, reject));
+    }, reject)));
   }
 
   /* ---------- 3D lettering ---------- */
-  const COLORS = { ink:0x0c4a2c, coral:0xff5a24, cream:0xf6f2e7 };
+  const COLORS = { ink:[0x0c4a2c,0.5], coral:[0xff5a24,0.5], cream:[0xf6f2e7,0.56], lime:[0xd5df79,0.55] };
   const materials = {};
   const lettering = [];   // blocks: { root, mode, group, lines:[{el, marker, mesh, text, key}] }
   // Not tone-mapped so the faces keep the brand colours; the colours are pre-scaled because the
   // scene lights are bright (they are tuned for the food).
   function textMaterial(color) {
-    return materials[color] ||= new T.MeshPhysicalMaterial({ color:new T.Color(COLORS[color] || COLORS.ink).multiplyScalar(0.5), roughness:0.7, metalness:0, clearcoat:0, specularIntensity:0.18, envMapIntensity:0.08, toneMapped:false });
+    return materials[color] ||= new T.MeshPhysicalMaterial({ color:new T.Color((COLORS[color] || COLORS.ink)[0]).multiplyScalar((COLORS[color] || COLORS.ink)[1]), roughness:0.7, metalness:0, clearcoat:0, specularIntensity:0.18, envMapIntensity:0.08, toneMapped:false });
   }
   // Per-character x offsets (in em) measured from the browser's own layout, so kerning and
   // letter-spacing match the DOM text exactly.
@@ -148,15 +186,16 @@
     return geometry;
   }
   function initLettering() {
-    if (!window.CTF_GLYPHS) return;
-    [['.hero h1', 'hero'], ['.word-panel-food h2', 'rail'], ['.word-panel-mood h2', 'rail'], ['.word-panel-time h2', 'rail'], ['.footer-wordmark', 'footer']].forEach(([selector, mode]) => {
-      const container = document.querySelector(selector); if (!container) return;
-      const lines = [...container.querySelectorAll('.t3d-line')].map(el => {
+    if (!window.CTF_GLYPHS || lite) return;   // low-power phones keep the flat DOM text
+    const targets = [['.hero h1', 'hero'], ['.footer-wordmark', 'footer'], ['.footer-ig', 'footer'], ...[...document.querySelectorAll('.hs-word')].map(el => [el, 'pan'])];
+    targets.forEach(([selector, mode]) => {
+      const container = typeof selector === 'string' ? document.querySelector(selector) : selector; if (!container) return;
+      const lines = (container.matches('.t3d-line') ? [container] : [...container.querySelectorAll('.t3d-line')]).map(el => {
         const marker = document.createElement('i');   // zero-size baseline probe
         marker.setAttribute('aria-hidden', 'true'); marker.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline';
         el.appendChild(marker);
         const text = [...el.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim();
-        return { el, marker, text, mesh:null, key:'' };
+        return { el, marker, text, mesh:null, key:'', ver:-1, fs:0, baseOff:0 };
       });
       const group = new T.Group(); textLayer.add(group);
       lettering.push({ root:container, mode, group, lines });
@@ -168,31 +207,33 @@
     const smooth01 = (a, b, x) => smooth(a, b, x);
     for (const block of lettering) {
       const rect = block.root.getBoundingClientRect();
-      const on = rect.bottom > -40 && rect.top < vh + 40 && rect.width > 8;
+      const on = rect.bottom > -40 && rect.top < vh + 40 && rect.right > -80 && rect.left < vw + 80 && rect.width > 8;
       block.group.visible = on; if (!on) continue; any = true;
       const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
       block.group.position.set((cx - vw / 2) * upp, -(cy - vh / 2) * upp, 0);
       const lean = paused ? 0 : 1;
-      let rx = -tiltY * 0.16 * lean, ry = tiltX * 0.26 * lean;
+      const leanScale = block.mode === 'hero' ? 1 : 0.55;   // big words lean less
+      let rx = -tiltY * 0.16 * lean * leanScale, ry = tiltX * 0.26 * lean * leanScale;
+      if (block.mode === 'pan') ry += ((cx - vw / 2) / vw) * -0.5 * lean;   // words swing as they cross the viewport
       if (block.mode === 'hero') rx -= smooth01(0, 1, scrollY / (vh * 0.75)) * 0.9 * (paused ? 0 : 1);
-      else if (block.mode === 'footer') {
-        if (vw <= 760) rx = ry = 0;
-        else rx += (1 - smooth01(0, 1, (vh - rect.top) / (vh * 0.3))) * 1.15 * (paused ? 0 : 1);
-      }
-      else rx += (1 - smooth01(0, 1, (vh - rect.top) / (vh * 0.5))) * 0.32 * (paused ? 0 : 1);
+      else if (block.mode === 'footer') rx += (1 - smooth01(0, 1, (vh - rect.top) / (vh * 0.3))) * 1.15 * (paused ? 0 : 1);
       block.group.rotation.set(rx, ry, 0);
       block.lines.forEach((line, i) => {
-        const cs = getComputedStyle(line.el), fs = parseFloat(cs.fontSize);
         const lr = line.el.getBoundingClientRect(), width = Math.round(lr.width);
-        const key = `${fs}|${width}|${line.text}`;
-        if (key !== line.key && width > 4) {
-          line.key = key; line.mesh?.geometry.dispose();
-          const geometry = buildTextGeometry(line.text, measureOffsets(line.el, fs));
-          if (!line.mesh) { line.mesh = new T.Mesh(geometry, textMaterial(line.el.dataset.color)); block.group.add(line.mesh); }
-          else line.mesh.geometry = geometry;
+        if (line.ver !== layoutVersion && width > 4) {   // style/measure work only after a resize or font load
+          line.ver = layoutVersion;
+          line.fs = parseFloat(getComputedStyle(line.el).fontSize);
+          line.baseOff = line.marker.getBoundingClientRect().bottom - lr.top;
+          const key = `${line.fs}|${width}|${line.text}`;
+          if (key !== line.key) {
+            line.key = key; line.mesh?.geometry.dispose();
+            const geometry = buildTextGeometry(line.text, measureOffsets(line.el, line.fs));
+            if (!line.mesh) { line.mesh = new T.Mesh(geometry, textMaterial(line.el.dataset.color)); block.group.add(line.mesh); }
+            else line.mesh.geometry = geometry;
+          }
         }
         if (!line.mesh) return;
-        const base = line.marker.getBoundingClientRect().bottom;
+        const fs = line.fs, base = lr.top + line.baseOff;
         const fold = reducedQuery.matches || paused || introStart < 0 ? 0 : 1 - backOutSoft(T.MathUtils.clamp((time - introStart - 250 - i * 170) / 900, 0, 1));
         line.mesh.scale.setScalar(fs * upp);
         line.mesh.position.set((lr.left - vw / 2) * upp - block.group.position.x, -(base - vh / 2) * upp - block.group.position.y, 0);
@@ -209,40 +250,34 @@
   const backOut = t => { const c1 = 1.4, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
   const backOutSoft = t => { const c1 = 0.9, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
   const v3 = new T.Vector3();
+  const leadVector = pad => pad.lead === null ? heroLead : { bowl:+(pad.lead === 'bowl'), avocado:+(pad.lead === 'avocado'), citrus:+(pad.lead === 'citrus') };
+
   // Blend the pads by how close each one is to the viewport's middle band.
   function placeRig(upp) {
-    let sum = 0, sx = 0, sy = 0, ss = 0, conf = 0, heroWeight = 0;
+    let sum = 0, sx = 0, sy = 0, ss = 0, conf = 0;
+    const lead = { bowl:0, avocado:0, citrus:0 };
     // The focus line starts on the hero pad (so the hero is never pulled toward a nearby section)
     // and drifts to the middle of the viewport as the visitor scrolls.
     const first = pads[0].el.getBoundingClientRect();
     const heroY = Math.min(first.top + scrollY + first.height / 2, vh * 0.85);
     const focus = T.MathUtils.lerp(heroY, vh * 0.5, smooth(0, vh * 0.6, scrollY));
-    const mobileStage = vw <= 760;
-    const heroStage = first.bottom > vh * 0.35;
     for (const pad of pads) {
-      // The phone viewport has no room to show the trip across the review row.
-      if (mobileStage && (heroStage ? pad !== pads[0] : pad === pads[0])) continue;
       const r = pad.el.getBoundingClientRect();
       if (r.width < 8 || r.height < 8 || r.bottom < -vh * 0.6 || r.top > vh * 1.6) continue;
       const cy = r.top + r.height / 2, d = (cy - focus) / (vh * 0.42);
-      const w = Math.exp(-d * d);
-      if (pad === pads[0]) heroWeight = w;
+      const w = Math.exp(-d * d), lv = leadVector(pad);
       sum += w; conf = Math.max(conf, w);
       sx += w * (r.left + r.width / 2); sy += w * cy; ss += w * Math.min(r.width, r.height);
+      NAMES.forEach(n => { lead[n] += w * lv[n]; });
     }
-    if (sum < 1e-4) return 0;
+    if (sum < 1e-4) return { visible: 0, lead };
     const k = 1 / sum;
+    NAMES.forEach(n => { lead[n] *= k; });
     // Dip slightly while travelling between pads, and shrink away after the last one.
-    let visible = smooth(0.03, 0.32, conf) * (0.62 + 0.38 * smooth(0.3, 0.9, conf));
-    if (mobileStage) visible *= heroStage
-      ? smooth(vh * 0.35, vh * 0.55, first.bottom)
-      : 1 - smooth(vh * 0.15, vh * 0.35, first.bottom);
-    const mobileHero = vw <= 760 ? heroWeight * k : 0;
-    const heroScale = T.MathUtils.lerp(0.72, 0.82, T.MathUtils.clamp((vw - 320) / 120, 0, 1));
-    // Keep the hero bowl inside its orbit and clear of the controls on narrow screens.
+    const visible = smooth(0.03, 0.32, conf) * (0.62 + 0.38 * smooth(0.3, 0.9, conf));
     rig.position.set((sx * k - vw / 2) * upp, -(sy * k - vh / 2) * upp, 0);
-    rig.scale.setScalar(upp * ss * k / FRAME_UNITS * zoom * visible * (1 - mobileHero * (1 - heroScale)));
-    return visible;
+    rig.scale.setScalar(upp * ss * k / FRAME_UNITS * zoom * visible);
+    return { visible, lead };
   }
 
   function render(time) {
@@ -254,8 +289,9 @@
     const ease = paused ? 1 : 1 - Math.exp(-dt * 12);
     yaw = T.MathUtils.lerp(yaw, targetYaw, ease); pitch = T.MathUtils.lerp(pitch, targetPitch, ease); zoom = T.MathUtils.lerp(zoom, targetZoom, ease);
     tiltX = T.MathUtils.lerp(tiltX, pageX, ease * 0.6); tiltY = T.MathUtils.lerp(tiltY, pageY, ease * 0.6);
+    NAMES.forEach(n => { heroLead[n] = paused ? +(selected === n) : T.MathUtils.lerp(heroLead[n], +(selected === n), 1 - Math.exp(-dt * 5)); });
     const upp = 2 * DIST * Math.tan(T.MathUtils.degToRad(FOV / 2)) / vh;
-    const visible = placeRig(upp);
+    const { visible, lead } = placeRig(upp);
     const foodOn = visible > 0.001;
     rig.visible = foodOn;
     const textOn = updateLettering(time, upp, foodOn);
@@ -264,28 +300,31 @@
     if (foodOn) {
       const hover = !paused && !drag;
       // Scroll-directed turn: roughly a third of a revolution per viewport of travel.
-      const scrollSpin = paused || vw <= 760 ? 0 : (scrollY / vh) * 2.1;
+      const scrollSpin = paused ? 0 : (scrollY / vh) * 2.1;
       spin.rotation.set(pitch + (hover ? pointerY * 0.06 : 0), yaw + scrollSpin + (hover ? pointerX * 0.1 : 0), 0);
-      NAMES.forEach(name => {
-        const group = models[name];
-        group.visible = name === selected;
-        shadows[name].visible = name === selected;
-        if (!group.visible) return;
-        const revealStart = Math.max(introStart, selectionStart);
-        const intro = paused || reducedQuery.matches ? 1 : T.MathUtils.clamp((time - revealStart) / 850, 0, 1);
+      NAMES.forEach((name, i) => {
+        const group = models[name]; if (!group) return;
+        const intro = paused || reducedQuery.matches ? 1 : T.MathUtils.clamp((time - group.userData.born - i * 120) / 1100, 0, 1);
         const pop = intro >= 1 ? 1 : Math.max(0.0001, backOut(intro));
-        const cfg = layout[name];
-        group.position.set(cfg.position[0], cfg.position[1] - (1 - pop) * 0.9, cfg.position[2]);
-        group.scale.setScalar(cfg.scale * pop);
-        group.rotation.set(cfg.rotation[0], cfg.rotation[1] + (1 - pop) * 2.4, cfg.rotation[2]);
+        const pos = [0, 0, 0], rot = [0, 0, 0]; let scale = 0;
+        NAMES.forEach(l => {
+          const w = lead[l]; if (w < 1e-3) return;
+          const cfg = layout[l][name];
+          for (let a = 0; a < 3; a++) { pos[a] += w * cfg.position[a]; rot[a] += w * cfg.rotation[a]; }
+          scale += w * cfg.scale;
+        });
+        group.position.set(pos[0], pos[1] - (1 - pop) * 0.9, pos[2]);
+        group.scale.setScalar(scale * pop);
+        group.rotation.set(rot[0], rot[1] + (1 - pop) * 2.4, rot[2]);
         if (!paused) {
-          group.position.y += Math.sin(phase * 0.9) * 0.065;
-          group.rotation.y += Math.sin(phase * 0.38) * 0.1;
+          const primary = lead[name] > 0.5;
+          group.position.y += Math.sin(phase * (primary ? 0.9 : 0.8) + (primary ? 0 : 2 + i)) * (primary ? 0.065 : 0.1);
+          if (primary) group.rotation.y += Math.sin(phase * 0.38) * 0.1; else group.rotation.z += Math.sin(phase * 0.6 + i) * 0.08;
         }
       });
       scene.updateMatrixWorld(true);
-      NAMES.filter(name => name === selected).forEach(name => {
-        const group = models[name], shadow = shadows[name];
+      NAMES.forEach(name => {
+        const group = models[name], shadow = shadows[name]; if (!group) return;
         group.getWorldPosition(v3); rig.worldToLocal(v3);
         const height = Math.max(0, v3.y - FLOOR), lift = T.MathUtils.clamp((height - 1.4) / 3.2, 0, 0.65);
         const width = group.scale.x * 0.95 * (1 - lift * 0.35);
@@ -294,17 +333,18 @@
       });
     }
     renderer.render(scene, camera);
-    const intro = introStart >= 0 && time - Math.max(introStart, selectionStart) < 1800;
+    const intro = introStart >= 0 && (time - introStart < 1800 || NAMES.some(n => models[n] && time - models[n].userData.born < 1500));
     if (!paused || intro) schedule();
   }
   function resize() {
-    vw = Math.max(1, canvas.clientWidth); vh = Math.max(1, canvas.clientHeight);
+    vw = Math.max(1, canvas.clientWidth); vh = Math.max(1, canvas.clientHeight); layoutVersion++;
     renderer.setSize(vw, vh, false); camera.aspect = vw / vh; camera.updateProjectionMatrix(); schedule();
   }
   const resizeObserver = new ResizeObserver(resize); resizeObserver.observe(canvas);
   addEventListener('scroll', schedule, { passive:true });
-  addEventListener('load', schedule);
-  if (document.fonts?.ready) document.fonts.ready.then(schedule);
+  const relayout = () => { layoutVersion++; schedule(); };
+  addEventListener('load', relayout);
+  if (document.fonts?.ready) document.fonts.ready.then(relayout);
   window.addEventListener('pointermove', event => {
     if (event.pointerType !== 'mouse' || paused) return;
     pageX = event.clientX / innerWidth * 2 - 1; pageY = event.clientY / innerHeight * 2 - 1; schedule();
@@ -312,8 +352,7 @@
   function resetView() { targetYaw = targetPitch = 0; targetZoom = 1; pointerX = pointerY = 0; schedule(); }
   document.querySelectorAll('[data-scene]').forEach(button => button.addEventListener('click', () => {
     if (!ready) return;
-    if (selected === button.dataset.scene) return;
-    selected = button.dataset.scene; selectionStart = performance.now(); hero.dataset.ingredient = selected;
+    selected = button.dataset.scene; hero.dataset.ingredient = selected;
     document.querySelectorAll('[data-scene]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
     wrap.setAttribute('aria-label', `Interactive 3D ${LABEL[selected]} scene. Drag to rotate, arrow keys to turn, plus and minus to zoom, Home to reset.`);
     status.textContent = `${LABEL[selected][0].toUpperCase() + LABEL[selected].slice(1)} selected.`; resetView();
@@ -356,13 +395,16 @@
   canvas.addEventListener('webglcontextlost', event => {
     event.preventDefault(); contextLost = true; fallback('3D paused by your browser. Reload to explore again.');
   });
-  Promise.all(NAMES.map(loadModel)).then(() => {
+  const later = window.requestIdleCallback ? fn => requestIdleCallback(fn, { timeout:2500 }) : fn => setTimeout(fn, 600);
+  loadModel('bowl').then(() => {
     if (disposed || contextLost) return;
     ready = true; initLettering(); resize();
     wrap.classList.add('scene-ready'); loading.hidden = true; wrap.tabIndex = 0;
     buttons.forEach(button => { button.disabled = false; });
     help.textContent = 'Drag to discover a fresh perspective.';
-    status.textContent = '3D bowl ready. Choose Bowl, Avocado or Citrus, then drag or use the arrow keys to rotate. The selected model follows you as you scroll.'; schedule();
+    status.textContent = '3D bowl ready. Drag or use the arrow keys to rotate. It follows you down the page as you scroll.'; schedule();
+    // Avocado and mandarin (about 5 MB together) arrive once the page is idle and pop in when ready.
+    later(() => ['avocado', 'citrus'].forEach(name => loadModel(name).then(schedule).catch(() => {})));
   }).catch(() => {
     disposed = true; resizeObserver.disconnect(); renderer.dispose(); environment.dispose();
     fallback('Food photography shown. The 3D scene could not load.');
